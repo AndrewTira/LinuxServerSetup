@@ -1,0 +1,26 @@
+ 
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitwarden
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    namespace: bitwarden  #update namespace name if you wish
+    name: in-cluster   #update cluster name if its different
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  source:
+    repoURL: https://charts.bitwarden.com/
+    targetRevision: "2025.4.2"
+    chart: self-host
+    helm:
+      values: |
+        controller:
+          service:
+            type: ClusterIP
