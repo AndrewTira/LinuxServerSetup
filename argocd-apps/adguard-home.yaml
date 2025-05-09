@@ -1,13 +1,12 @@
- 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: clickhouse
+  name: adguard-home
   namespace: argocd
 spec:
   project: default
   destination:
-    namespace: clickhouse  #update namespace name if you wish
+    namespace: adguard-home  #update namespace name if you wish
     name: in-cluster   #update cluster name if its different
   syncPolicy:
     automated:
@@ -16,49 +15,52 @@ spec:
     syncOptions:
       - CreateNamespace=true
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "9.2.2"
-    chart: clickhouse
+    repoURL: https://k8s.adguard.org/helm/
+    targetRevision: "1.1.1"
+    chart: adguard-home
     helm:
       values:
-        # Example values - YOU MUST CUSTOMIZE THESE FOR YOUR DEPLOYMENT!
-        # This is a minimal example, a real deployment will need more configuration.
+         # --- AdGuard Home Helm Chart Values ---
+        # Customize these values based on the chart documentation:
+        # https://github.com/AdGuardTeam/AdGuardHome/tree/master/helm
 
-        # Configure persistence for data
+        # Example: Configure persistence for configuration and data (highly recommended)
         persistence:
           enabled: true
-          size: 10Gi # Adjust size as needed for your data
-          # storageClass: your-storage-class-name # Specify your storage class if needed
+          size: 5Gi # Adjust size as needed
+          # storageClass: your-storage-class-name # Specify your storage class
 
-        # Set a password for the default user (CRITICAL FOR SECURITY)
-        auth:
-          password: adminadmin # CHANGE THIS to a strong password
+        # Example: Configure Ingress for the web UI
+        ingress:
+          enabled: true
+          ingressClassName: nginx # Or your ingress controller class
+          hosts:
+            - host: adguard.yourdomain.com
+              paths:
+                - path: /
+                  pathType: Prefix
+          # tls:
+          #   - secretName: adguard-home-tls
+          #     hosts:
+          #       - adguard.yourdomain.com
 
-        # Configure replicas for high availability (optional, default is 1)
-        # replicaCount: 3
+        # Example: Configure service type for DNS (ClusterIP, NodePort, LoadBalancer)
+        # You will need to point your DNS clients to this service.
+        service:
+          main:
+            type: ClusterIP # Or LoadBalancer/NodePort for external access
+            # If using LoadBalancer or NodePort, note the IP/ports to use for DNS
+            # loadBalancerIP: "your-lb-ip" # If using LoadBalancer and want a specific IP
 
-        # Configure ingress for external access (optional)
-        # ingress:
-        #   enabled: true
-        #   hostname: clickhouse.yourdomain.com
-        #   # tls:
-        #   #   - secretName: clickhouse-tls
-        #   #     hosts:
-        #   #       - clickhouse.yourdomain.com
-        #   # annotations:
-        #   #   kubernetes.io/ingress.class: nginx
+        # Example: Configure resource requests and limits
+        # resources:
+        #   requests:
+        #     cpu: 100m
+        #     memory: 128Mi
+        #   limits:
+        #     cpu: 500m
+        #     memory: 512Mi
 
-        # You may need to configure ClickHouse Keeper or Zookeeper
-        # for clustered deployments (more advanced)
-        # keeper:
-        #   enabled: true
-        #   replicaCount: 3
-
-        # Add any other necessary ClickHouse configurations here
-        # configuration:
-        #   users:
-        #     default:
-        #       networks:
-        #         ip:
-        #           - 0.0.0.0/0 # WARNING: Allows connections from anywhere - restrict this!
-
+        # Example: Set username and password (use Secrets in production!)
+        # username: admin
+        # password: your-secure-adguard-password # CHANGE THIS

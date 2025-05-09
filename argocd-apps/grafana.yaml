@@ -1,13 +1,12 @@
- 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: clickhouse
+  name: grafana
   namespace: argocd
 spec:
   project: default
   destination:
-    namespace: clickhouse  #update namespace name if you wish
+    namespace: grafana  #update namespace name if you wish
     name: in-cluster   #update cluster name if its different
   syncPolicy:
     automated:
@@ -16,49 +15,57 @@ spec:
     syncOptions:
       - CreateNamespace=true
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "9.2.2"
-    chart: clickhouse
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: "7.3.10"
+    chart: grafana
     helm:
       values:
-        # Example values - YOU MUST CUSTOMIZE THESE FOR YOUR DEPLOYMENT!
-        # This is a minimal example, a real deployment will need more configuration.
+        # --- Grafana Helm Chart Values ---
+        # Customize these values based on the chart documentation:
+        # https://github.com/grafana/helm-charts/tree/main/charts/grafana
 
-        # Configure persistence for data
+        # Example: Set admin password (CRITICAL FOR SECURITY)
+        # adminPassword: your-secure-grafana-password # Use a Kubernetes Secret for this in production!
+        # You can reference a secret:
+        # admin:
+        #   existingSecret: grafana-admin-secret
+        #   currentPasswordKey: GF_SECURITY_ADMIN_PASSWORD
+
+        # Example: Enable persistence (highly recommended)
         persistence:
           enabled: true
-          size: 10Gi # Adjust size as needed for your data
-          # storageClass: your-storage-class-name # Specify your storage class if needed
+          size: 10Gi # Adjust size as needed
+          # storageClassName: your-storage-class-name # Specify your storage class
 
-        # Set a password for the default user (CRITICAL FOR SECURITY)
-        auth:
-          password: adminadmin # CHANGE THIS to a strong password
-
-        # Configure replicas for high availability (optional, default is 1)
-        # replicaCount: 3
-
-        # Configure ingress for external access (optional)
+        # Example: Configure Ingress for external access
         # ingress:
         #   enabled: true
-        #   hostname: clickhouse.yourdomain.com
-        #   # tls:
-        #   #   - secretName: clickhouse-tls
-        #   #     hosts:
-        #   #       - clickhouse.yourdomain.com
-        #   # annotations:
-        #   #   kubernetes.io/ingress.class: nginx
+        #   ingressClassName: nginx # Or your ingress controller class
+        #   hosts:
+        #     - grafana.yourdomain.com
+        #   tls:
+        #     - secretName: grafana-tls
+        #       hosts:
+        #         - grafana.yourdomain.com
 
-        # You may need to configure ClickHouse Keeper or Zookeeper
-        # for clustered deployments (more advanced)
-        # keeper:
-        #   enabled: true
-        #   replicaCount: 3
+        # Example: Configure resource requests and limits
+        # resources:
+        #   requests:
+        #     cpu: 100m
+        #     memory: 128Mi
+        #   limits:
+        #     cpu: 500m
+        #     memory: 512Mi
 
-        # Add any other necessary ClickHouse configurations here
-        # configuration:
-        #   users:
-        #     default:
-        #       networks:
-        #         ip:
-        #           - 0.0.0.0/0 # WARNING: Allows connections from anywhere - restrict this!
-
+        # Example: Provision Prometheus as a data source
+        # datasources:
+        #   datasources.yaml:
+        #     apiVersion: 1
+        #     datasources:
+        #       - name: Prometheus
+        #         type: prometheus
+        #         url: http://prometheus-server.monitoring.svc.cluster.local # Adjust URL based on your Prometheus service name and namespace
+        #         access: proxy
+        #         isDefault: true
+        #         version: 1
+        #         editable: true

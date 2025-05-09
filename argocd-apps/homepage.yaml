@@ -1,13 +1,12 @@
- 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: clickhouse
+  name: homepage
   namespace: argocd
 spec:
   project: default
   destination:
-    namespace: clickhouse  #update namespace name if you wish
+    namespace: homepage  #update namespace name if you wish
     name: in-cluster   #update cluster name if its different
   syncPolicy:
     automated:
@@ -16,49 +15,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "9.2.2"
-    chart: clickhouse
+    repoURL: https://github.com/gethomepage/homepage
+    targetRevision: "1.2.0"
+    chart: homepage
     helm:
       values:
-        # Example values - YOU MUST CUSTOMIZE THESE FOR YOUR DEPLOYMENT!
-        # This is a minimal example, a real deployment will need more configuration.
-
-        # Configure persistence for data
-        persistence:
-          enabled: true
-          size: 10Gi # Adjust size as needed for your data
-          # storageClass: your-storage-class-name # Specify your storage class if needed
-
-        # Set a password for the default user (CRITICAL FOR SECURITY)
-        auth:
-          password: adminadmin # CHANGE THIS to a strong password
-
-        # Configure replicas for high availability (optional, default is 1)
-        # replicaCount: 3
-
-        # Configure ingress for external access (optional)
-        # ingress:
-        #   enabled: true
-        #   hostname: clickhouse.yourdomain.com
-        #   # tls:
-        #   #   - secretName: clickhouse-tls
-        #   #     hosts:
-        #   #       - clickhouse.yourdomain.com
-        #   # annotations:
-        #   #   kubernetes.io/ingress.class: nginx
-
-        # You may need to configure ClickHouse Keeper or Zookeeper
-        # for clustered deployments (more advanced)
-        # keeper:
-        #   enabled: true
-        #   replicaCount: 3
-
-        # Add any other necessary ClickHouse configurations here
-        # configuration:
-        #   users:
-        #     default:
-        #       networks:
-        #         ip:
-        #           - 0.0.0.0/0 # WARNING: Allows connections from anywhere - restrict this!
 

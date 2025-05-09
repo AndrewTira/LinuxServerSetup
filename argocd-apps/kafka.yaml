@@ -1,13 +1,12 @@
- 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: clickhouse
+  name: kafka
   namespace: argocd
 spec:
   project: default
   destination:
-    namespace: clickhouse  #update namespace name if you wish
+    namespace: kafka  #update namespace name if you wish
     name: in-cluster   #update cluster name if its different
   syncPolicy:
     automated:
@@ -17,48 +16,59 @@ spec:
       - CreateNamespace=true
   source:
     repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "9.2.2"
-    chart: clickhouse
+    targetRevision: "27.3.0"
+    chart: kafka
     helm:
       values:
-        # Example values - YOU MUST CUSTOMIZE THESE FOR YOUR DEPLOYMENT!
-        # This is a minimal example, a real deployment will need more configuration.
+        # --- Kafka Helm Chart Values ---
+        # Customize these values based on the chart documentation:
+        # https://github.com/bitnami/charts/tree/main/bitnami/kafka
 
-        # Configure persistence for data
+        # Example: Configure Kafka persistence (CRITICAL FOR DATA SAFETY)
         persistence:
           enabled: true
-          size: 10Gi # Adjust size as needed for your data
-          # storageClass: your-storage-class-name # Specify your storage class if needed
+          size: 10Gi # Adjust size based on your data volume
+          # storageClass: your-storage-class-name # Specify your storage class
 
-        # Set a password for the default user (CRITICAL FOR SECURITY)
+        # Example: Configure Zookeeper persistence (CRITICAL FOR DATA SAFETY)
+        # Zookeeper is often deployed as a dependency by this chart
         auth:
-          password: adminadmin # CHANGE THIS to a strong password
+          clientProtocol: plaintext # Or ssl
+          # passwords:
+          #   clientPassword: your-kafka-client-password # Use Secrets!
+          #   metricsPassword: your-kafka-metrics-password
+          #   jmxPassword: your-kafka-jmx-password
 
-        # Configure replicas for high availability (optional, default is 1)
+        # Example: Configure Kafka replicas (for high availability)
         # replicaCount: 3
 
-        # Configure ingress for external access (optional)
-        # ingress:
-        #   enabled: true
-        #   hostname: clickhouse.yourdomain.com
-        #   # tls:
-        #   #   - secretName: clickhouse-tls
-        #   #     hosts:
-        #   #       - clickhouse.yourdomain.com
-        #   # annotations:
-        #   #   kubernetes.io/ingress.class: nginx
-
-        # You may need to configure ClickHouse Keeper or Zookeeper
-        # for clustered deployments (more advanced)
-        # keeper:
-        #   enabled: true
+        # Example: Configure Zookeeper replicas (for high availability)
+        # zookeeper:
         #   replicaCount: 3
+        #   persistence:
+        #     enabled: true
+        #     size: 10Gi
+        #     # storageClass: your-storage-class-name
 
-        # Add any other necessary ClickHouse configurations here
-        # configuration:
-        #   users:
-        #     default:
-        #       networks:
-        #         ip:
-        #           - 0.0.0.0/0 # WARNING: Allows connections from anywhere - restrict this!
+        # Example: Configure external access (e.g., via NodePort or LoadBalancer)
+        # service:
+        #   type: ClusterIP
+        #   nodePorts:
+        #     client: ""
+        #     external: ""
+        #   externalTrafficPolicy: Cluster
+        #   external:
+        #     type: LoadBalancer # Or NodePort
+        #     ports:
+        #       - name: external
+        #         port: 9094
+        #         nodePort: 30094 # If using NodePort
 
+        # Example: Resource requests and limits
+        # resources:
+        #   requests:
+        #     cpu: 500m
+        #     memory: 512Mi
+        #   limits:
+        #     cpu: 1000m
+        #     memory: 1Gi
