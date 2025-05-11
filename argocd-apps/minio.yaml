@@ -19,7 +19,7 @@ spec:
     targetRevision: "16.0.10"
     chart: minio
     helm:
-      values:
+      values: |
         #Example (you MUST customize these for security and functionality)
         auth:
           rootUser: admin

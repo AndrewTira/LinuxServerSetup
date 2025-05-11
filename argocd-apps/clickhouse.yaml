@@ -19,7 +19,7 @@ spec:
     targetRevision: "9.2.2"
     chart: clickhouse
     helm:
-      values:
+      values: |
         # Example values - YOU MUST CUSTOMIZE THESE FOR YOUR DEPLOYMENT!
         # This is a minimal example, a real deployment will need more configuration.
 
