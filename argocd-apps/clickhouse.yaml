@@ -15,7 +15,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
   source:
-    repoURL: https://charts.bitnami.com/bitnami
+    repoURL: oci://registry-1.docker.io/bitnamicharts
     targetRevision: "9.2.2"
     chart: clickhouse
     helm:
