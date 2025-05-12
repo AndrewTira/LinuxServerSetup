@@ -16,7 +16,7 @@ spec:
       - CreateNamespace=true
   source:
     repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "16.0.10"
+    targetRevision: "16.0.8"
     chart: minio
     helm:
       values: |
