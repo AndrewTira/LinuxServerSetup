@@ -16,7 +16,7 @@ spec:
       - CreateNamespace=true
   source:
     repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: "27.3.0"
+    targetRevision: "32.2.3"
     chart: kafka
     helm:
       values: |
