@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: letsencrypt-stag
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    name: in-cluster
+    namespace: cert-manager
+  source:
+    repoURL: https://github.com/AndrewTira/LinuxServerSetup.git
+    targetRevision: main
+    path: argocd-infrastructure     # Folder where letsencrypt-prod.yaml is located
+    directory:
+      recurse: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
