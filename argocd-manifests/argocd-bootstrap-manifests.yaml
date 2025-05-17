@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-bootstrap-apps    # Name for this master application
+  name: argocd-bootstrap-manifests    # Name for this master application
   namespace: argocd        # Must be the namespace where Argo CD is installed
 spec:
   project: default         # The project this master app belongs to
@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git # Your repository URL
     targetRevision: main   # Or the branch you are using (e.g., master)
-    path: argocd-apps      # This is the crucial part: points to the directory
+    path: argocd-manifests      # This is the crucial part: points to the directory
                            # containing your other Application YAMLs
 
   destination:
