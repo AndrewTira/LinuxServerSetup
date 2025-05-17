@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git
     targetRevision: main
-    path: adguard-home
+    path: adguard-manifests/adguard-home
     directory:
       recurse: true
   syncPolicy:
