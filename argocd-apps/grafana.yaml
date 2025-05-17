@@ -3,69 +3,51 @@ kind: Application
 metadata:
   name: grafana
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"  # optional: to wait for certs, ingress
 spec:
   project: default
   destination:
-    namespace: grafana  #update namespace name if you wish
-    name: in-cluster   #update cluster name if its different
+    name: in-cluster
+    namespace: grafana
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 6.61.2
+    helm:
+      values: |
+        adminUser: admin
+        adminPassword: admin123  # in production, use a Kubernetes secret
+
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            cert-manager.io/cluster-issuer: "letsencrypt-staging"  # or "letsencrypt-prod"
+          hosts:
+            - host: grafana.internal.example.com
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - grafana.internal.com
+              secretName: grafana-tls
+
+        service:
+          type: ClusterIP
+
+        persistence:
+          enabled: true
+          size: 1Gi
+          accessModes:
+            - ReadWriteOnce
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-  source:
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: "7.3.10"
-    chart: grafana
-    helm:
-      values: |
-        # --- Grafana Helm Chart Values ---
-        # Customize these values based on the chart documentation:
-        # https://github.com/grafana/helm-charts/tree/main/charts/grafana
 
-        # Example: Set admin password (CRITICAL FOR SECURITY)
-        # adminPassword: your-secure-grafana-password # Use a Kubernetes Secret for this in production!
-        # You can reference a secret:
-        # admin:
-        #   existingSecret: grafana-admin-secret
-        #   currentPasswordKey: GF_SECURITY_ADMIN_PASSWORD
-
-        # Example: Enable persistence (highly recommended)
-        persistence:
-          enabled: true
-          size: 10Gi # Adjust size as needed
-          # storageClassName: your-storage-class-name # Specify your storage class
-
-        # Example: Configure Ingress for external access
-        # ingress:
-        #   enabled: true
-        #   ingressClassName: nginx # Or your ingress controller class
-        #   hosts:
-        #     - grafana.yourdomain.com
-        #   tls:
-        #     - secretName: grafana-tls
-        #       hosts:
-        #         - grafana.yourdomain.com
-
-        # Example: Configure resource requests and limits
-        # resources:
-        #   requests:
-        #     cpu: 100m
-        #     memory: 128Mi
-        #   limits:
-        #     cpu: 500m
-        #     memory: 512Mi
-
-        # Example: Provision Prometheus as a data source
-        # datasources:
-        #   datasources.yaml:
-        #     apiVersion: 1
-        #     datasources:
-        #       - name: Prometheus
-        #         type: prometheus
-        #         url: http://prometheus-server.monitoring.svc.cluster.local # Adjust URL based on your Prometheus service name and namespace
-        #         access: proxy
-        #         isDefault: true
-        #         version: 1
-        #         editable: true
