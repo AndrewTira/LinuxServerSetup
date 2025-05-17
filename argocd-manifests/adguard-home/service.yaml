@@ -2,27 +2,27 @@ apiVersion: v1
 kind: Service
 metadata:
   name: adguard-home
-  annotations:
-    metallb.universe.tf/address-pool: default-pool
+  namespace: adguard-home
 spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.0.241  # Optional but recommended
   selector:
     app: adguard-home
-  type: LoadBalancer
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 80
-      name: http
-    - port: 443
+    - name: https
+      port: 443
       targetPort: 443
-      name: https
-    - port: 3000
+    - name: admin-ui
+      port: 3000
       targetPort: 3000
-      name: admin-ui
-    - port: 53
+    - name: dns-udp
+      port: 53
       targetPort: 53
       protocol: UDP
-      name: dns-udp
-    - port: 53
+    - name: dns-tcp
+      port: 53
       targetPort: 53
       protocol: TCP
-      name: dns-tcp
