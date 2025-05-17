@@ -16,13 +16,6 @@ spec:
     targetRevision: 0.14.9   # Or latest stable
     helm:
       values: |
-        configInline:
-          address-pools:
-            - name: default
-              protocol: layer2
-              addresses:
-                - 10.0.0.240-10.0.0.250
-
   syncPolicy:
     automated:
       prune: true
