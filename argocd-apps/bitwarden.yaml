@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   destination:
-    namespace: bitwarden  #update namespace name if you wish
-    name: in-cluster   #update cluster name if its different
+    namespace: bitwarden
+    name: in-cluster
   syncPolicy:
     automated:
       prune: true
@@ -16,10 +16,33 @@ spec:
       - CreateNamespace=true
   source:
     repoURL: https://charts.bitwarden.com/
-    targetRevision: "2025.4.2"
     chart: self-host
+    targetRevision: "2025.4.2"
     helm:
       values: |
+        global:
+          domain: bitwarden.example.com
+
         controller:
           service:
             type: ClusterIP
+
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+          hosts:
+            - host: bitwarden.example.com
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - bitwarden.example.com
+              secretName: bitwarden-tls  # Make sure this TLS secret exists (via cert-manager or manually)
+
+        admin:
+          email: "admin@example.com"
+          password: "changeme123"  # For dev only. Replace with secure secret in prod.
