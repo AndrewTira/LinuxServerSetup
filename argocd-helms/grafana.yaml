@@ -19,22 +19,22 @@ spec:
         adminUser: admin
         adminPassword: admin123  # For production, store in a Kubernetes secret
 
-        ingress:
-          enabled: true
-          ingressClassName: nginx
-          annotations:
-            nginx.ingress.kubernetes.io/ssl-redirect: "true"
-            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-            cert-manager.io/cluster-issuer: "letsencrypt-staging"
-          hosts:
-            - host: grafana.internal.example.com
-              paths:
-                - path: /
-                  pathType: Prefix
-          tls:
-            - hosts:
-                - grafana.internal.example.com
-              secretName: grafana-tls
+      ingress:
+        enabled: true
+        ingressClassName: nginx
+        annotations:
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+          cert-manager.io/cluster-issuer: "letsencrypt-staging"
+        hosts:
+          - grafana.internal.example.com
+        path: /
+        pathType: Prefix
+        tls:
+          - hosts:
+              - grafana.internal.example.com
+            secretName: grafana-tls
+
 
         service:
           type: ClusterIP
