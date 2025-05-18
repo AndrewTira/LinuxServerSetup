@@ -27,7 +27,7 @@ spec:
             nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
             cert-manager.io/cluster-issuer: "letsencrypt-staging"  # or "letsencrypt-prod"
           hosts:
-            - host: grafana.internal.example.com
+            - host: grafana.internal.com
               paths:
                 - path: /
                   pathType: Prefix
