@@ -41,12 +41,21 @@ spec:
           tls:
             - hosts:
                 - bitwarden.example.com
-              secretName: bitwarden-tls  # Make sure this TLS secret exists
+              secretName: bitwarden-tls  # Ensure this TLS secret exists
 
         admin:
           email: "admin@example.com"
-          password: "changeme123"  # Use a Kubernetes secret in production
+          password: "changeme123"  # Use a secret in production
 
         database:
-          enabled: true  # Use Bitwarden's internal SQL Server
-
+          enabled: true
+          mssql:
+            enabled: true
+            password: "YourStrongP@ssw0rd!"  # Replace with a secure value or reference a secret
+            image:
+              tag: "2025.4.2"
+            persistence:
+              enabled: true
+              storageClass: "standard"  # Adjust to match your cluster’s default
+              accessMode: ReadWriteOnce
+              size: 10Gi
