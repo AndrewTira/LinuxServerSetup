@@ -4,7 +4,7 @@ metadata:
   name: grafana
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "2"  # optional: to wait for certs, ingress
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   destination:
@@ -17,15 +17,15 @@ spec:
     helm:
       values: |
         adminUser: admin
-        adminPassword: admin123  # in production, use a Kubernetes secret
+        adminPassword: admin123  # For production, store in a Kubernetes secret
 
         ingress:
           enabled: true
-          className: nginx
+          ingressClassName: nginx
           annotations:
             nginx.ingress.kubernetes.io/ssl-redirect: "true"
             nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-            cert-manager.io/cluster-issuer: "letsencrypt-staging"  # or "letsencrypt-prod"
+            cert-manager.io/cluster-issuer: "letsencrypt-staging"
           hosts:
             - host: grafana.internal.example.com
               paths:
@@ -50,4 +50,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-
