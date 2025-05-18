@@ -41,8 +41,12 @@ spec:
           tls:
             - hosts:
                 - bitwarden.example.com
-              secretName: bitwarden-tls  # Make sure this TLS secret exists (via cert-manager or manually)
+              secretName: bitwarden-tls  # Make sure this TLS secret exists
 
         admin:
           email: "admin@example.com"
-          password: "changeme123"  # For dev only. Replace with secure secret in prod.
+          password: "changeme123"  # Use a Kubernetes secret in production
+
+        database:
+          enabled: true  # Use Bitwarden's internal SQL Server
+
