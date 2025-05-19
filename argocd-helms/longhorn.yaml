@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd
+spec:
+  destination:
+    name: in-cluster
+    namespace: longhorn-system
+  project: default
+  source:
+    repoURL: https://charts.longhorn.io
+    chart: longhorn
+    targetRevision: 1.6.0  # replace with the latest
+    helm:
+      parameters:
+        - name: defaultSettings.defaultReplicaCount
+          value: "1"
+        - name: persistence.defaultClass
+          value: "true"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
