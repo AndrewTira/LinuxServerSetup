@@ -16,7 +16,7 @@ spec:
         persistence:
           defaultClass: true
         preUpgradeCheckJob:
-          enabled: false
+          jobEnabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system
