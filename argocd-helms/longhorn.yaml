@@ -4,23 +4,24 @@ metadata:
   name: longhorn
   namespace: argocd
 spec:
-  destination:
-    name: in-cluster
-    namespace: longhorn-system
   project: default
   source:
     repoURL: https://charts.longhorn.io
     chart: longhorn
-    targetRevision: 1.6.0  # replace with the latest
+    targetRevision: 1.6.0
     helm:
-      parameters:
-        - name: defaultSettings.defaultReplicaCount
-          value: "1"
-        - name: persistence.defaultClass
-          value: "true"
+      values: |
+        defaultSettings:
+          defaultReplicaCount: 1
+        persistence:
+          defaultClass: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - Replace=true
