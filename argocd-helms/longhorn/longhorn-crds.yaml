@@ -3,11 +3,13 @@ kind: Application
 metadata:
   name: longhorn-crds
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
     repoURL: https://github.com/longhorn/longhorn.git
-    targetRevision: v1.8.1
+    targetRevision: v1.6.0
     path: deploy/longhorn-crds
     directory:
       recurse: true
