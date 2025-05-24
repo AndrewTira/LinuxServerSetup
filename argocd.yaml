@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup
     targetRevision: HEAD
-    path: argocd
+    path: argocd/argocd-bootstrap
     directory:
       recurse: true
   destination:
