@@ -21,7 +21,7 @@ spec:
     helm:
       values: |
         global:
-          domain: bitwarden.example.com
+          domain: bitwarden.k3s.home
 
         controller:
           service:
@@ -34,11 +34,25 @@ spec:
             nginx.ingress.kubernetes.io/ssl-redirect: "true"
             nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
           hosts:
-            - host: bitwarden.example.com
+            - host: bitwarden.k3s.home
               paths:
                 - path: /
                   pathType: Prefix
           tls:
             - hosts:
-                - bitwarden.example.com
-              secretName: bitwarden-tls  #
+                - bitwarden.k3s.home
+              secretName: bitwarden-tls
+
+        # --- ADD THESE VALUES FOR SQL SERVER CONNECTION ---
+        mssql:
+          host: postgresql.bitwarden.svc.cluster.local # Replace with your SQL Server Service FQDN
+          port: 5432 # Default SQL Server port
+          database: bitwarden         # The database name for Bitwarden
+          username: bitwarden         # Your SQL Server username for Bitwarden
+          password: supersecure
+          # Reference the secret created above for the password
+          # existingSecret: bitwarden-mssql-secret
+          # existingSecretKey: mssql-password
+          # If your SQL Server uses a self-signed cert or you want to disable strict TLS validation (not recommended for production):
+          # trustServerCertificate: true
+          # encrypt: false # Set to true if your SQL Server forces encryption
