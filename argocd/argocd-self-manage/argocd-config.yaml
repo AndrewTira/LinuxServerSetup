@@ -2,11 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: argocd-cm
-labels:
-  app.kubernetes.io/name: argocd-cm
-  app.kubernetes.io/part-of: argocd
-data:
-  url: https://argocd.k3s.home             # 🔁 Set your Argo CD URL
-  statusBadgeEnabled: "true"
-  admin.enabled: "true"
-  accounts.admin: apiKey                      # allows use of argocd CLI with API tokens
+  labels:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
