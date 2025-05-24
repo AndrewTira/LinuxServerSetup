@@ -22,6 +22,8 @@ spec:
       values: |
         global:
           domain: bitwarden.k3s.home
+          # IMPORTANT: Also set the full URL if your Bitwarden chart requires it for CORS
+          # url: https://bitwarden.k3s.home
 
         controller:
           service:
@@ -43,16 +45,20 @@ spec:
                 - bitwarden.k3s.home
               secretName: bitwarden-tls
 
-        # --- ADD THESE VALUES FOR SQL SERVER CONNECTION ---
-        mssql:
-          host: postgresql.bitwarden.svc.cluster.local # Replace with your SQL Server Service FQDN
-          port: 5432 # Default SQL Server port
-          database: bitwarden         # The database name for Bitwarden
-          username: bitwarden         # Your SQL Server username for Bitwarden
+        # --- ADD THIS SECTION FOR POSTGRESQL CONNECTION ---
+        # Refer to the Bitwarden Helm chart's values.yaml for the exact structure.
+        # This is a common pattern for Bitnami/similar charts.
+        database:
+          type: postgresql # Explicitly set database type to postgresql
+          host: postgresql.bitwarden.svc.cluster.local # <-- Use your PostgreSQL Service FQDN
+          port: 5432 # Your PostgreSQL port
+          name: bitwarden # The database name you want Bitwarden to use/create
+          user: bitwarden
           password: supersecure
           # Reference the secret created above for the password
-          # existingSecret: bitwarden-mssql-secret
-          # existingSecretKey: mssql-password
-          # If your SQL Server uses a self-signed cert or you want to disable strict TLS validation (not recommended for production):
-          # trustServerCertificate: true
-          # encrypt: false # Set to true if your SQL Server forces encryption
+          existingSecret: bitwarden-postgresql-secret
+          existingSecretKey: postgresql-password
+          # Optional: SSL mode, depending on your PostgreSQL setup (e.g., if connecting over a public network)
+          # sslMode: verify-full # Or 'require', 'prefer', 'disable'
+          # For in-cluster communication, 'disable' or 'prefer' is often used,
+          # but 'verify-full' is more secure if you have TLS configured.
