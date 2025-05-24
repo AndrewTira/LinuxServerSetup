@@ -1,0 +1,9 @@
+# argo-cd/config/argocd-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  timeout.reconciliation: 60s
+  application.instanceLabelKey: argocd.argoproj.io/instance
