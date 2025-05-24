@@ -1,0 +1,32 @@
+# app-postgresql.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgresql
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    namespace: bitwarden
+    name: in-cluster
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: postgresql
+    targetRevision: 13.2.24  # or latest
+    helm:
+      values: |
+        auth:
+          username: bitwarden
+          password: supersecure
+          database: bitwarden
+        primary:
+          persistence:
+            enabled: true
+            size: 8Gi
+        fullnameOverride: postgresql
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
