@@ -1,4 +1,3 @@
-# base-cm.yaml (matches the original state or Helm chart)
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,3 +5,5 @@ metadata:
   namespace: argocd
 data:
   url: https://argocd.k3s.home
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  timeout.reconciliation: "60s"
