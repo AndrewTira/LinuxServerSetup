@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bootstrap-helms
+  name: cluster-bootstrap
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup
     targetRevision: HEAD
-    path: argocd-helms
+    path: argocd/argocd-bootstrap
     directory:
       recurse: true
   destination:
