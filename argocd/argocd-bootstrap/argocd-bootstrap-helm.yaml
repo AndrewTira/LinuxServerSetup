@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git # Your repository URL
     targetRevision: main   # Or the branch you are using (e.g., master)
-    path: argocd-helms      # This is the crucial part: points to the directory
+    path: argocd/argocd-helms      # This is the crucial part: points to the directory
                            # containing your other Application YAMLs
 
   destination:

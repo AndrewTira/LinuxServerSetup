@@ -1,17 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: letsencrypt-stag
+  name: metallb-config
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   destination:
     name: in-cluster
-    namespace: cert-manager
+    namespace: metallb-system
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git
     targetRevision: main
-    path: argocd-infrastructure     # Folder where letsencrypt-prod.yaml is located
+    path: argocd/argocd-infrastructure/metallb-config
     directory:
       recurse: true
   syncPolicy:
