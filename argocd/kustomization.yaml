@@ -1,4 +1,5 @@
+# argo-cd/kustomization.yaml
 resources:
-  - argocd-cm.yaml
-  - argocd-rbac-cm.yaml
-  - argocd-secret.yaml
+  - install.yaml        # core install
+  - config/             # configuration (argocd-cm, secrets, rbac)
+  - ingress/            # ingress config (optional)
