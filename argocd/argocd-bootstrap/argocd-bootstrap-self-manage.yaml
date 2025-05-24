@@ -1,17 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-ingress
+  name: argocd-self-manage
   namespace: argocd
 spec:
-  destination:
-    name: in-cluster
-    namespace: argocd
   project: default
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git
-    targetRevision: main
-    path: argocd/argocd-infrastructure/ingress
+    targetRevision: HEAD
+    path: argocd/argocd-self-manage
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
