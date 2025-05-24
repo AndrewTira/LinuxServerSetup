@@ -1,25 +1,8 @@
-# argo-cd/config/argocd-cm.yaml
+# base-cm.yaml (matches the original state or Helm chart)
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: argocd-cm
   namespace: argocd
-  labels:
-    app.kubernetes.io/name: argocd-cm
-    app.kubernetes.io/part-of: argocd
 data:
-  # URL of the Argo CD API server (important for UI to work)
-  url: https://argocd.yourdomain.com
-
-  # Recommended default
-  application.instanceLabelKey: argocd.argoproj.io/instance
-  timeout.reconciliation: 60s
-
-  # Leave this empty unless you use external login
-  # oidc.config: |
-  #   name: Azure
-  #   issuer: https://login.microsoftonline.com/...
-
-  # Optional: Automatically add known Git repos here
-  # repositories: |
-  #   - url: https://github.com/your-org/your-repo
+  url: https://argocd.k3s.home
