@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bitnami-docker-oci-repo # A unique name for your repository secret
+  namespace: argocd             # IMPORTANT: This should be the namespace where your Argo CD is installed
+  labels:
+    argocd.argoproj.io/secret-type: repository # This label is crucial for Argo CD to recognize it as a repository secret
+stringData:
+  # The URL of the OCI registry.
+  # For Docker Hub, this is 'registry-1.docker.io'.
+  # Do NOT include 'oci://' prefix or specific chart paths (e.g., /bitnamicharts) here.
+  # Argo CD handles the OCI protocol and chart path separately in the Application manifest.
+  url: registry-1.docker.io
+
+  # Set enableOCI to "true" to tell Argo CD that this is an OCI-based registry.
+  # This prevents Argo CD from looking for a traditional index.yaml file.
+  enableOCI: "true"
+
+  # The type of the repository. For OCI Helm charts, this should be "helm".
+  type: helm
+
+  # Optional: If you were accessing a private OCI registry, you would include
+  # username and password/token here. For public Bitnami charts on Docker Hub,
+  # these are not required.
+  # username: your-dockerhub-username
+  # password: your-dockerhub-pat

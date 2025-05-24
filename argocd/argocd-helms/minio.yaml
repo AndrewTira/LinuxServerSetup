@@ -15,9 +15,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
   source:
-    repoURL: oci://registry-1.docker.io/bitnamicharts
-    targetRevision: "16.0.8"
-    chart: minio
+    repoURL: registry-1.docker.io
+    chart: bitnamicharts/minio
+    targetRevision: "16.0.10"
     helm:
       values: |
         #Example (you MUST customize these for security and functionality)
