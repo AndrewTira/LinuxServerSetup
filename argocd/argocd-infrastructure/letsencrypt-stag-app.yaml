@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/AndrewTira/LinuxServerSetup.git
     targetRevision: main
-    path: argocd/argocd-infrastructure     # Folder where letsencrypt-prod.yaml is located
+    path: argocd/argocd-infrastructure/cert-manager     # Folder where letsencrypt-prod.yaml is located
     directory:
       recurse: true
   syncPolicy:
