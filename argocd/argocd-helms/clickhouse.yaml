@@ -4,6 +4,7 @@ metadata:
   name: clickhouse
   namespace: argocd
 spec:
+  replicas: 0
   project: default
   destination:
     namespace: clickhouse  #update namespace name if you wish

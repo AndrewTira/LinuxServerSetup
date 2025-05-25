@@ -5,6 +5,7 @@ metadata:
   name: postgresql
   namespace: argocd
 spec:
+  replicas: 0
   project: default
   destination:
     namespace: postgresql

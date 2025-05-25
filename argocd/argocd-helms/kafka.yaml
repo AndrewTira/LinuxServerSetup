@@ -4,6 +4,7 @@ metadata:
   name: kafka
   namespace: argocd
 spec:
+  replicas: 0
   project: default
   destination:
     namespace: kafka  #update namespace name if you wish

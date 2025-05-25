@@ -4,6 +4,7 @@ metadata:
   name: minio
   namespace: argocd
 spec:
+  replicas: 0
   project: default
   destination:
     namespace: minio  #update namespace name if you wish
