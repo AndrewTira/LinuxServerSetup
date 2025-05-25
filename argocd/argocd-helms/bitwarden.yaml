@@ -21,10 +21,10 @@ spec:
             edition: "express"
             existingSecret:
               enabled: false
-            # WARNING: Use a Kubernetes Secret for saPassword in production!
-            # For this example, we keep it here as per previous values,
-            # but ideally this should be part of secrets.secretName as well.
-            saPassword: "supersecure"
+            # WARNING: In production, saPassword should be passed securely via a Kubernetes Secret
+            # and referenced by the chart, or managed by a secrets manager.
+            # For this example, it's kept here as per your configuration.
+            saPassword: "supersecure" # <--- Ensure this matches the password used in your bitwarden-sql-connection-string secret
             resources:
               requests:
                 cpu: 100m
@@ -33,64 +33,38 @@ spec:
                 cpu: 200m
                 memory: 512Mi
             persistence:
-              enabled: false
-
-        # Global Settings from secrets.secretName (handled by the secret you created)
-        # However, for consistency with your provided parameters, let's keep the mail/email settings here
-        # Note: The chart documentation implies globalSettings__ are passed via secrets.secretName,
-        # but the general.email parameters are separate. We'll use both as per your list.
+              enabled: false # Set to true for persistent data
 
         # General Application Settings
         general:
           domain: "bitwarden.k3s.home" # <--- IMPORTANT: Your main domain for Bitwarden
           ingress:
             enabled: true # Keep true to use the chart's Ingress resource
-            className: "nginx" # <--- IMPORTANT: Match your Ingress Controller class
+            className: "nginx" # <--- IMPORTANT: Match your Ingress Controller class (e.g., "nginx", "traefik")
             # Annotations for cert-manager and Nginx redirect
             annotations:
-              cert-manager.io/cluster-issuer: "letsencrypt-stag" # Your ClusterIssuer name
+              cert-manager.io/cluster-issuer: "letsencrypt-stag" # Your ClusterIssuer name for staging certs
               nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-            # Paths are likely default and don't need explicit setting unless you have custom needs
-            # paths:
+            # paths: # Uncomment and configure if custom path mapping is needed
             #   - path: /
             #     pathType: Prefix
             tls:
-              name: "bitwarden-tls-secret" # <--- Name of the Secret cert-manager will create
-              clusterIssuer: "letsencrypt-prod" # <--- Your ClusterIssuer name
+              name: "bitwarden-tls-secret" # <--- Name of the Secret cert-manager will create for the domain
+              clusterIssuer: "letsencrypt-prod" # <--- Your ClusterIssuer name for production certs
 
-          # Email Settings (for Gmail)
+          # Email Settings (for Gmail SMTP via STARTTLS on port 587)
           email:
             replyToEmail: "no-reply@vault.AndrewK3sBitwarden.com" # <--- A valid email or no-reply address
             smtpHost: "smtp.gmail.com"
-            smtpPort: "587"
-            smtpSsl: "false" # False for STARTTLS on port 587
-            # For the username and password, the chart explicitly lists `general.email.smtpUsername`
-            # and `general.email.smtpPassword`. You would either put the actual values here (less secure)
-            # OR the chart *might* allow you to reference the `secrets.secretName` for these too.
-            # Given your provided list doesn't show smtpUsername/smtpPassword directly,
-            # it's likely they are expected to come from `secrets.secretName`.
-            # Let's assume for now they need to be defined separately OR are part of `secrets.secretName`.
-            # If the chart explicitly has `general.email.smtpUsername` and `general.email.smtpPassword`,
-            # you'd add them here with the values from your `bitwarden-smtp-secrets`.
-            # For this example, let's assume the chart expects them via general.email:
-            # You would need to check the chart's values.yaml if these exist.
-            # If they don't, it implies the chart expects them via `secrets.secretName` or similar,
-            # which means adding to your `bitwarden-config-secrets` or creating a dedicated secret
-            # that the chart is designed to read.
-            # Lacking explicit params, we'll put them in `globalSettings` for now, but be prepared to adjust
-            # if the chart has specific `general.email.smtpUsername` and `general.email.smtpPassword` fields.
-            # For best practice, these should always come from a secret.
-
-        # Global Settings (if not covered by `secrets.secretName` or `general.email`)
-        # This is for any specific global settings the chart might need that aren't secrets.
-        # Assuming your dataProtection keys are now in `secrets.secretName`
-        # and email settings are under `general.email`.
-        # Remove these if the chart handles them via secrets.secretName.
-        # globalSettings:
-        #   dataProtection__defaultKey__id: "bitwarden-key"
-        #   dataProtection__keys__0__id: "bitwarden-key"
-        #   dataProtection__keys__0__value: "some-256-bit-base64-key=="
-
+            smtpPort: "587" # <--- Must be a string
+            smtpSsl: "false" # <--- Must be a string (false for STARTTLS on 587, true for SSL on 465 usually)
+            # smtpUsername and smtpPassword are often expected to come from the 'secrets.secretName'
+            # (e.g., custom-secret) if the chart doesn't provide dedicated fields under general.email.
+            # If the chart *does* provide `general.email.smtpUsername` and `general.email.smtpPassword`,
+            # you would add them here, referencing your SMTP secret values.
+            # Example (if supported by chart):
+            # smtpUsername: "your-gmail-username@gmail.com"
+            # smtpPassword: "your-app-password" # Use an app password for Gmail!
 
         # API and Web resources (from your previous values)
         api:
@@ -129,14 +103,20 @@ spec:
 
         # Secret Name for core Bitwarden configuration
         secrets:
-          secretName: "custom-secret" # <--- Name of the main secret you created
-
-        # Cloud Communication (Optional, based on your list)
-        # enableCloudCommunication: true
-        # cloudRegion: "US" # or "EU"
-
-        # Shared Storage Class (Only if persistence is enabled and you need ReadWriteMany)
-        # sharedStorageClassName: "your-rwx-storage-class"
+          secretName: "custom-secret" # <--- Name of the main secret you created for Bitwarden settings
+          # IMPORTANT NOTE REGARDING DATABASE MIGRATION JOB:
+          # The 'bitwarden-db-pre-upgrade' job is a Helm pre-upgrade hook.
+          # For the *initial deployment*, it often runs before the internal MSSQL server
+          # is fully provisioned and ready to accept connections, leading to "Name or service not known" errors.
+          # Resolution for initial deployment:
+          # 1. Ensure 'bitwarden-sql-connection-string' secret is created correctly and separately.
+          #    (See previous steps, it should point to 'Server=bitwarden-mssql-server,1433;Database=Bitwarden;User ID=sa;Password=<YOUR_SA_PASSWORD>;Encrypt=True;TrustServerCertificate=True;')
+          # 2. Allow Argo CD to sync. The job will likely fail, but the MSSQL server and other components will deploy.
+          # 3. Wait until 'bitwarden-mssql-server' pod is 'Running' and '1/1 READY'.
+          #    (Use `kubectl get pods -n bitwarden -l app.kubernetes.io/component=mssql-server -w`)
+          # 4. Manually delete the failed job: `kubectl delete job bitwarden-db-pre-upgrade -n bitwarden`
+          # 5. Force another Argo CD sync: Go to UI -> Refresh -> Sync.
+          #    The job should now recreate and succeed, completing the database setup.
 
   syncPolicy:
     automated:
