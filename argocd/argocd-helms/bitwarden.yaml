@@ -9,9 +9,6 @@ spec:
     repoURL: https://charts.bitwarden.com/
     chart: self-host
     targetRevision: "2025.5.1"  # Replace with the desired chart version
-    path: argocd/argocd-helms/bitwarden
-    directory:
-      recurse: true
     helm:
       values: |
         global:
