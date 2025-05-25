@@ -14,13 +14,17 @@ spec:
     targetRevision: "2025.5.1"
     helm:
       values: |
+        # Core Database Settings
         database:
           enabled: true
           mssql:
             edition: "express"
             existingSecret:
               enabled: false
-            saPassword: "supersecure"  # Use a Secret in production!
+            # WARNING: Use a Kubernetes Secret for saPassword in production!
+            # For this example, we keep it here as per previous values,
+            # but ideally this should be part of secrets.secretName as well.
+            saPassword: "supersecure"
             resources:
               requests:
                 cpu: 100m
@@ -29,13 +33,66 @@ spec:
                 cpu: 200m
                 memory: 512Mi
             persistence:
-              enabled: false  # No PVC for test/dev
+              enabled: false
 
-        globalSettings:
-          dataProtection__defaultKey__id: "bitwarden-key"
-          dataProtection__keys__0__id: "bitwarden-key"
-          dataProtection__keys__0__value: "some-256-bit-base64-key=="
+        # Global Settings from secrets.secretName (handled by the secret you created)
+        # However, for consistency with your provided parameters, let's keep the mail/email settings here
+        # Note: The chart documentation implies globalSettings__ are passed via secrets.secretName,
+        # but the general.email parameters are separate. We'll use both as per your list.
 
+        # General Application Settings
+        general:
+          domain: "bitwarden.k3s.home" # <--- IMPORTANT: Your main domain for Bitwarden
+          ingress:
+            enabled: true # Keep true to use the chart's Ingress resource
+            className: "nginx" # <--- IMPORTANT: Match your Ingress Controller class
+            # Annotations for cert-manager and Nginx redirect
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-stag" # Your ClusterIssuer name
+              nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+            # Paths are likely default and don't need explicit setting unless you have custom needs
+            # paths:
+            #   - path: /
+            #     pathType: Prefix
+            tls:
+              name: "bitwarden-tls-secret" # <--- Name of the Secret cert-manager will create
+              clusterIssuer: "letsencrypt-prod" # <--- Your ClusterIssuer name
+
+          # Email Settings (for Gmail)
+          email:
+            replyToEmail: "no-reply@vault.AndrewK3sBitwarden.com" # <--- A valid email or no-reply address
+            smtpHost: "smtp.gmail.com"
+            smtpPort: 587
+            smtpSsl: false # False for STARTTLS on port 587
+            # For the username and password, the chart explicitly lists `general.email.smtpUsername`
+            # and `general.email.smtpPassword`. You would either put the actual values here (less secure)
+            # OR the chart *might* allow you to reference the `secrets.secretName` for these too.
+            # Given your provided list doesn't show smtpUsername/smtpPassword directly,
+            # it's likely they are expected to come from `secrets.secretName`.
+            # Let's assume for now they need to be defined separately OR are part of `secrets.secretName`.
+            # If the chart explicitly has `general.email.smtpUsername` and `general.email.smtpPassword`,
+            # you'd add them here with the values from your `bitwarden-smtp-secrets`.
+            # For this example, let's assume the chart expects them via general.email:
+            # You would need to check the chart's values.yaml if these exist.
+            # If they don't, it implies the chart expects them via `secrets.secretName` or similar,
+            # which means adding to your `bitwarden-config-secrets` or creating a dedicated secret
+            # that the chart is designed to read.
+            # Lacking explicit params, we'll put them in `globalSettings` for now, but be prepared to adjust
+            # if the chart has specific `general.email.smtpUsername` and `general.email.smtpPassword` fields.
+            # For best practice, these should always come from a secret.
+
+        # Global Settings (if not covered by `secrets.secretName` or `general.email`)
+        # This is for any specific global settings the chart might need that aren't secrets.
+        # Assuming your dataProtection keys are now in `secrets.secretName`
+        # and email settings are under `general.email`.
+        # Remove these if the chart handles them via secrets.secretName.
+        # globalSettings:
+        #   dataProtection__defaultKey__id: "bitwarden-key"
+        #   dataProtection__keys__0__id: "bitwarden-key"
+        #   dataProtection__keys__0__value: "some-256-bit-base64-key=="
+
+
+        # API and Web resources (from your previous values)
         api:
           resources:
             requests:
@@ -54,6 +111,7 @@ spec:
               cpu: 100m
               memory: 256Mi
 
+        # Component Enablement (from your previous values and new list)
         admin:
           enabled: false
         events:
@@ -62,6 +120,24 @@ spec:
           enabled: false
         push:
           enabled: false
+        component: # New based on your list
+          scim:
+            enabled: false # Default is false
+        volume: # New based on your list
+          logs:
+            enabled: true # Recommended for troubleshooting
+
+        # Secret Name for core Bitwarden configuration
+        secrets:
+          secretName: "custom-secret" # <--- Name of the main secret you created
+
+        # Cloud Communication (Optional, based on your list)
+        # enableCloudCommunication: true
+        # cloudRegion: "US" # or "EU"
+
+        # Shared Storage Class (Only if persistence is enabled and you need ReadWriteMany)
+        # sharedStorageClassName: "your-rwx-storage-class"
+
   syncPolicy:
     automated:
       prune: true
