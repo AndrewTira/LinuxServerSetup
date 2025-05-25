@@ -4,52 +4,64 @@ metadata:
   name: bitwarden
   namespace: argocd
 spec:
+  destination:
+    namespace: bitwarden
+    server: https://kubernetes.default.svc
   project: default
   source:
     repoURL: https://charts.bitwarden.com/
     chart: self-host
-    targetRevision: "2025.5.1"  # Replace with the desired chart version
+    targetRevision: "2025.5.1"
     helm:
       values: |
-        global:
-          domain: bitwarden.example.com  # Replace with your domain
-          storage:
-            className: longhorn  # Replace with your storage class
         database:
           enabled: true
-          type: postgresql
-          postgresql:
-            auth:
-              username: bitwarden
-              password: supersecure  
-              database: bitwarden
-            primary:
-              persistence:
-                enabled: true
-                size: 8Gi
-                storageClass: longhorn  # Replace with your storage class
-        
-        serviceAccount:
-          name: service-account
-          create: true
-        
-        ingress:
-          enabled: true
-          className: nginx  # Replace with your ingress class
-          annotations:
-            cert-manager.io/cluster-issuer: "letsencrypt-prod"
-          hosts:
-            - host: bitwarden.k3s.home  # Replace with your domain
-              paths:
-                - path: /
-                  pathType: Prefix
-          tls:
-            - hosts:
-                - bitwarden.k3s.home  # Replace with your domain
-              secretName: bitwarden-tls
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: bitwarden
+          mssql:
+            edition: "express"
+            existingSecret:
+              enabled: false
+            saPassword: "supersecure"  # Use a Secret in production!
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 200m
+                memory: 512Mi
+            persistence:
+              enabled: false  # No PVC for test/dev
+
+        globalSettings:
+          dataProtection__defaultKey__id: "bitwarden-key"
+          dataProtection__keys__0__id: "bitwarden-key"
+          dataProtection__keys__0__value: "some-256-bit-base64-key=="
+
+        api:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+
+        web:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+
+        admin:
+          enabled: false
+        events:
+          enabled: false
+        notifications:
+          enabled: false
+        push:
+          enabled: false
   syncPolicy:
     automated:
       prune: true
