@@ -62,8 +62,8 @@ spec:
           email:
             replyToEmail: "no-reply@vault.AndrewK3sBitwarden.com" # <--- A valid email or no-reply address
             smtpHost: "smtp.gmail.com"
-            smtpPort: 587
-            smtpSsl: false # False for STARTTLS on port 587
+            smtpPort: "587"
+            smtpSsl: "false" # False for STARTTLS on port 587
             # For the username and password, the chart explicitly lists `general.email.smtpUsername`
             # and `general.email.smtpPassword`. You would either put the actual values here (less secure)
             # OR the chart *might* allow you to reference the `secrets.secretName` for these too.
