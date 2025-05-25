@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitwarden
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitwarden.com/
+    chart: self-host
+    targetRevision: "2025.5.1"  # Replace with the desired chart version
+    helm:
+      values: |
+        global:
+          domain: bitwarden.example.com  # Replace with your domain
+          storage:
+            className: longhorn  # Replace with your storage class
+        database:
+          enabled: true
+          type: postgresql
+          postgresql:
+            auth:
+              username: bitwarden
+              password: supersecure  
+              database: bitwarden
+            primary:
+              persistence:
+                enabled: true
+                size: 8Gi
+                storageClass: longhorn  # Replace with your storage class
+        ingress:
+          enabled: true
+          className: nginx  # Replace with your ingress class
+          annotations:
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          hosts:
+            - host: bitwarden.k3s.home  # Replace with your domain
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - bitwarden.k3s.home  # Replace with your domain
+              secretName: bitwarden-tls
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bitwarden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
