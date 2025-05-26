@@ -16,9 +16,9 @@ spec:
     helm:
       values: |
         auth:
-          username: bitwarden
+          username: vaultwarden
           password: supersecure
-          database: bitwarden
+          database: vaultwarden
         primary:
           persistence:
             enabled: true
