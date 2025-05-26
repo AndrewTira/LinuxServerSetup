@@ -5,7 +5,6 @@ metadata:
   name: postgresql
   namespace: argocd
 spec:
-  replicas: 0
   project: default
   destination:
     namespace: postgresql
@@ -25,9 +24,9 @@ spec:
             enabled: true
             size: 8Gi
         fullnameOverride: postgresql
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+#  syncPolicy:
+#    automated:
+#      prune: true
+#      selfHeal: true
+#    syncOptions:
+#      - CreateNamespace=true

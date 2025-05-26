@@ -4,17 +4,16 @@ metadata:
   name: minio
   namespace: argocd
 spec:
-  replicas: 0
   project: default
   destination:
     namespace: minio  #update namespace name if you wish
     name: in-cluster   #update cluster name if its different
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+#  syncPolicy:
+#    automated:
+#      prune: true
+#      selfHeal: true
+#    syncOptions:
+#      - CreateNamespace=true
   source:
     repoURL: registry-1.docker.io
     chart: bitnamicharts/minio
