@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://guerzon.github.io/vaultwarden # Official Helm chart repository for Vaultwarden
     chart: vaultwarden
-    targetRevision: "0.32.0" # <--- IMPORTANT: Use a specific, stable version. Check Artifact Hub for the latest.
+    targetRevision: "1.2.5" # <--- IMPORTANT: Update to a recent, stable version like this one!
     helm:
       values: |
         # --- Vaultwarden Helm Chart Values ---
@@ -20,102 +20,66 @@ spec:
         vaultwarden:
           # Your domain for accessing Vaultwarden (e.g., vault.yourdomain.com)
           # Make sure you have a DNS A record pointing this domain to your Ingress Controller's IP.
-          domain: "https://vault.k3s.home" # <--- IMPORTANT: Replace with your actual domain
+          domain: "https://vault.k3s.home" # Ensure protocol is included!
 
           # Admin Token for the web admin panel (optional but highly recommended for management)
           # IMPORTANT SECURITY NOTE:
           # NEVER hardcode this in Git for production. Generate a strong random string.
           # For production, use a Kubernetes Secret and reference it here using valueFrom.
-          # Example: openssl rand -base64 48
           adminToken: "YOUR_VERY_STRONG_ADMIN_TOKEN_HERE" # <--- IMPORTANT: Replace with a real token!
-          # Example for referencing a secret (assuming 'vaultwarden-secrets' secret with key 'adminToken'):
-          # adminToken:
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: vaultwarden-secrets
-          #       key: adminToken
 
-          # Allow new user sign-ups (set to false after initial setup for private instances)
-          allowSignups: "true" # "true" or "false" (string)
-
-          # Require email verification for new sign-ups (requires SMTP setup)
-          verifySignup: "false" # "true" or "false" (string)
-
-          # Require email to be successfully sent before login (stronger, requires SMTP)
-          requireEmail: "false" # "true" or "false" (string)
-
-          # Log level (e.g., "warn", "info", "debug")
+          allowSignups: "true"
+          verifySignup: "false"
+          requireEmail: "false"
           logLevel: "info"
 
         # Ingress configuration for external access
         ingress:
           enabled: true
-          # Your Ingress Controller class name (e.g., "nginx", "traefik")
           className: "nginx" # <--- IMPORTANT: Match your Ingress Controller's class
-
-          # Hostname for the Ingress
-          hostname: "vault.k3s.home" # <--- IMPORTANT: Match your domain from 'vaultwarden.domain'
-
-          # Annotations for cert-manager and other Ingress controller specific settings
+          hostname: "vault.k3s.home" # <--- IMPORTANT: Match your domain
           annotations:
-            # Tell cert-manager to issue a certificate using your ClusterIssuer
-            cert-manager.io/cluster-issuer: "letsencrypt-prod" # <--- Your ClusterIssuer name (e.g., "letsencrypt-prod" or "letsencrypt-stag")
-            # Force HTTP to HTTPS redirect for Nginx Ingress Controller
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
             nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-            # Add any other Ingress controller specific annotations here (e.g., for websockets)
             nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
             nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-            nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" # If your backend is HTTPS (often not needed for Vaultwarden)
-
-          # TLS configuration (cert-manager will create this secret)
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
           tls:
             - hosts:
-                - "vault.k3s.home" # <--- IMPORTANT: Match your domain
-              secretName: "vaultwarden-tls-secret" # cert-manager will store the cert here
+                - "vault.k3s.home"
+              secretName: "vaultwarden-tls-secret"
 
-        # Persistence for Vaultwarden's data (attachments, icon cache, SQLite if used)
-        # VERY IMPORTANT: Do NOT use emptyDir for production.
+        # Persistence for Vaultwarden's data
         persistence:
           enabled: true
-          size: 5Gi # Adjust size as needed (e.g., 5Gi, 10Gi)
-          # Leave empty to use your default storage class, or specify a StorageClass name
+          size: 5Gi
           storageClass: "" # <--- IMPORTANT: Specify your StorageClass if not using default (e.g., "longhorn")
 
         # Database configuration (for external PostgreSQL)
         database:
-          type: "postgresql" # <--- Specify PostgreSQL
-          # Connection string for your external PostgreSQL database
+          type: "postgresql"
+          # *** UPDATED CONNECTION STRING BASED ON YOUR POSTGRESQL MANIFEST ***
+          connectionString: "Host=postgresql.postgresql.svc.cluster.local;Port=5432;Database=vaultwarden;Username=vaultwarden;Password=supersecure;Include Error Detail=True;"
           # IMPORTANT SECURITY NOTE:
           # NEVER hardcode passwords in Git for production.
-          # Use a Kubernetes Secret and reference it here.
-          # Example:
+          # Use a Kubernetes Secret and reference it here. Example:
           # connectionString:
           #   valueFrom:
           #     secretKeyRef:
-          #       name: vaultwarden-db-secrets # Name of your K8s Secret
+          #       name: vaultwarden-db-secrets # Name of your K8s Secret in the 'vaultwarden' namespace
           #       key: postgres_connection_string # Key within that secret holding the connection string
-          connectionString: "Host=postgresql.bitwarden-db.svc.cluster.local;Port=5432;Database=bitwarden_db;Username=bitwarden_user;Password=your-strong-postgres-password;Include Error Detail=True;" # <--- IMPORTANT: Replace with your actual PostgreSQL connection string!
 
-        # Email (SMTP) configuration for invitations, password resets, etc.
+        # Email (SMTP) configuration
         email:
           enabled: true
-          # IMPORTANT SECURITY NOTE:
-          # NEVER hardcode SMTP password in Git for production.
-          # Use a Kubernetes Secret and reference it here.
-          # Example:
-          # smtpPassword:
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: vaultwarden-smtp-secrets
-          #       key: smtp_password
           smtpHost: "smtp.gmail.com"
-          smtpPort: "587" # String type
-          smtpSsl: "false" # String type (false for STARTTLS on 587)
-          smtpUsername: "your-gmail-account@gmail.com" # <--- Your Gmail address
-          smtpPassword: "your-gmail-app-password" # <--- Your Gmail App Password (NOT your regular password!)
-          smtpFrom: "Vaultwarden <no-reply@vault.yourdomain.com>" # Sender email address
+          smtpPort: "587"
+          smtpSsl: "false"
+          smtpUsername: "your-gmail-account@gmail.com"
+          smtpPassword: "your-gmail-app-password" # <--- Use a K8s Secret for this!
+          smtpFrom: "Vaultwarden <no-reply@vault.k3s.home>"
 
-        # Resource requests and limits for the Vaultwarden pod
+        # Resource requests and limits
         resources:
           requests:
             cpu: 100m
@@ -124,30 +88,9 @@ spec:
             cpu: 200m
             memory: 512Mi
 
-        # Other optional settings (uncomment and configure as needed)
-        # timezone: "America/New_York" # Set your timezone
-        # webSockets:
-        #   enabled: true # Enable WebSocket notifications (recommended)
-        #   path: "/notifications/hub"
-        #   ingress:
-        #     enabled: true
-        #     className: "nginx"
-        #     hostname: "vault.yourdomain.com"
-        #     annotations:
-        #       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-        #       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-        #       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-        #     tls:
-        #       - hosts:
-        #           - "vault.yourdomain.com"
-        #         secretName: "vaultwarden-tls-secret"
-
-
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true # Ensures the 'vaultwarden' namespace is created if it doesn't exist
-      # If you're using sync waves to ensure PostgreSQL is ready first:
-      # - ServerSideApply=true # Consider for complex charts or when dealing with CRDs
+      - CreateNamespace=true
