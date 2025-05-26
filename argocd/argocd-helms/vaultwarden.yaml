@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://guerzon.github.io/vaultwarden # Official Helm chart repository for Vaultwarden
     chart: vaultwarden
-    targetRevision: "1.2.5" # <--- IMPORTANT: Update to a recent, stable version like this one!
+    targetRevision: "0.32.0" # <--- IMPORTANT: Update to a recent, stable version like this one!
     helm:
       values: |
         # --- Vaultwarden Helm Chart Values ---
