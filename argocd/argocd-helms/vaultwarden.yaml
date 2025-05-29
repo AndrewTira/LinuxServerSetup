@@ -2,42 +2,41 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: vaultwarden
-  namespace: argocd # Namespace where your Argo CD instance is running
+  namespace: argocd
 spec:
   destination:
-    namespace: vaultwarden # Namespace where Vaultwarden will be deployed
+    namespace: vaultwarden
     server: https://kubernetes.default.svc
-  project: default # Your Argo CD project (usually 'default' unless customized)
+  project: default
   source:
-    repoURL: https://guerzon.github.io/vaultwarden # Official Helm chart repository for Vaultwarden
+    repoURL: https://guerzon.github.io/vaultwarden
     chart: vaultwarden
-    targetRevision: "0.32.0" # <--- IMPORTANT: Update to a recent, stable version like this one!
+    targetRevision: "0.32.0"
     helm:
       values: |
-        # --- Vaultwarden Helm Chart Values ---
-
         # General application settings
         vaultwarden:
-          # Your domain for accessing Vaultwarden (e.g., vault.yourdomain.com)
-          # Make sure you have a DNS A record pointing this domain to your Ingress Controller's IP.
-          domain: "https://vault.k3s.home" # Ensure protocol is included!
+          # This 'domain' is likely used for ingress default hostname or other chart logic,
+          # but NOT for the DOMAIN env var directly in this chart.
+          domain: "https://vault.k3s.home"
 
-          # Admin Token for the web admin panel (optional but highly recommended for management)
-          # IMPORTANT SECURITY NOTE:
-          # NEVER hardcode this in Git for production. Generate a strong random string.
-          # For production, use a Kubernetes Secret and reference it here using valueFrom.
-          adminToken: "YOUR_VERY_STRONG_ADMIN_TOKEN_HERE" # <--- IMPORTANT: Replace with a real token!
-
+          adminToken: "YOUR_VERY_STRONG_ADMIN_TOKEN_HERE" # Ensure this is correctly templated or from a secret
           allowSignups: "true"
           verifySignup: "false"
           requireEmail: "false"
           logLevel: "info"
 
-        # Ingress configuration for external access
+        # --- THIS IS THE CRITICAL ADDITION/CHANGE ---
+        env:
+          general:
+            DOMAIN: "https://vault.k3s.home" # Sets the DOMAIN environment variable
+            # You can set other Vaultwarden environment variables here if needed
+            # e.g., WEBSOCKET_ENABLED: "true"
+
         ingress:
           enabled: true
-          className: "nginx" # <--- IMPORTANT: Match your Ingress Controller's class
-          hostname: "vault.k3s.home" # <--- IMPORTANT: Match your domain
+          className: "nginx"
+          hostname: "vault.k3s.home" # This correctly sets the ingress hostname
           annotations:
             cert-manager.io/cluster-issuer: "letsencrypt-prod"
             nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -49,37 +48,21 @@ spec:
                 - "vault.k3s.home"
               secretName: "vaultwarden-tls-secret"
 
-        # Persistence for Vaultwarden's data
         persistence:
           enabled: true
           size: 5Gi
-          storageClass: "" # <--- IMPORTANT: Specify your StorageClass if not using default (e.g., "longhorn")
+          storageClass: ""
 
-        # Database configuration (for external PostgreSQL)
         database:
           type: "postgresql"
-          # *** UPDATED CONNECTION STRING BASED ON YOUR POSTGRESQL MANIFEST ***
+          # This connectionString will be used by the chart to set the DATABASE_URL env var
           connectionString: "Host=postgresql.postgresql.svc.cluster.local;Port=5432;Database=vaultwarden;Username=vaultwarden;Password=supersecure;Include Error Detail=True;"
-          # IMPORTANT SECURITY NOTE:
-          # NEVER hardcode passwords in Git for production.
-          # Use a Kubernetes Secret and reference it here. Example:
-          # connectionString:
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: vaultwarden-db-secrets # Name of your K8s Secret in the 'vaultwarden' namespace
-          #       key: postgres_connection_string # Key within that secret holding the connection string
 
-        # Email (SMTP) configuration
         email:
           enabled: true
           smtpHost: "smtp.gmail.com"
-          smtpPort: "587"
-          smtpSsl: "false"
-          smtpUsername: "your-gmail-account@gmail.com"
-          smtpPassword: "your-gmail-app-password" # <--- Use a K8s Secret for this!
-          smtpFrom: "Vaultwarden <no-reply@vault.k3s.home>"
+          # ... (rest of your email config) ...
 
-        # Resource requests and limits
         resources:
           requests:
             cpu: 100m
@@ -87,7 +70,6 @@ spec:
           limits:
             cpu: 200m
             memory: 512Mi
-
   syncPolicy:
     automated:
       prune: true
