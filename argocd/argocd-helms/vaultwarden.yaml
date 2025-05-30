@@ -26,7 +26,7 @@ spec:
           requireEmail: "false"
           logLevel: "info"
         
-        DOMAIN: "https://vault.k3s.home"
+        domain: "https://vault.k3s.home"
 
         # --- THIS IS THE CRITICAL ADDITION/CHANGE ---
         env:
