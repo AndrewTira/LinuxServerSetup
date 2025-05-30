@@ -25,6 +25,8 @@ spec:
           verifySignup: "false"
           requireEmail: "false"
           logLevel: "info"
+        
+        DOMAIN: "https://vault.k3s.home"
 
         # --- THIS IS THE CRITICAL ADDITION/CHANGE ---
         env:
