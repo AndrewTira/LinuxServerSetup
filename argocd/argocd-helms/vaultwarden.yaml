@@ -15,36 +15,22 @@ spec:
     helm:
       values: |
         # General application settings
-        vaultwarden:
-          # This 'domain' is likely used for ingress default hostname or other chart logic,
-          # but NOT for the DOMAIN env var directly in this chart.
-          domain: "https://vault.k3s.home"
 
-          adminToken: "YOUR_VERY_STRONG_ADMIN_TOKEN_HERE" # Ensure this is correctly templated or from a secret
-          allowSignups: "true"
-          verifySignup: "false"
-          requireEmail: "false"
-          logLevel: "info"
         
         domain: "https://vault.k3s.home"
 
-        # --- THIS IS THE CRITICAL ADDITION/CHANGE ---
-        env:
-          general:
-            DOMAIN: "https://vault.k3s.home" # Sets the DOMAIN environment variable
-            # You can set other Vaultwarden environment variables here if needed
-            # e.g., WEBSOCKET_ENABLED: "true"
-
+    
         ingress:
           enabled: true
-          className: "nginx"
+          class: "nginx"
           hostname: "vault.k3s.home" # This correctly sets the ingress hostname
-          annotations:
-            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          nginxIngressAnnotations: true
+          additionalAnnotations:
+            cert-manager.io/cluster-issuer: "letsencrypt-stag"
             nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
             nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
             nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
           tls:
             - hosts:
                 - "vault.k3s.home"
@@ -56,9 +42,10 @@ spec:
           storageClass: ""
 
         database:
-          type: "postgresql"
+          type: "default"
+          # type: "postgresql"
           # This connectionString will be used by the chart to set the DATABASE_URL env var
-          connectionString: "Host=postgresql.postgresql.svc.cluster.local;Port=5432;Database=vaultwarden;Username=vaultwarden;Password=supersecure;Include Error Detail=True;"
+          # connectionString: "Host=postgresql.postgresql.svc.cluster.local;Port=5432;Database=vaultwarden;Username=vaultwarden;Password=supersecure;Include Error Detail=True;"
 
         email:
           enabled: true
