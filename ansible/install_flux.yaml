@@ -1,0 +1,323 @@
+---
+- name: "FluxCD Get Started: Prerequisites & Flux CLI Setup"
+  hosts: localhost # Run on the machine executing Ansible
+  gather_facts: no # Not strictly needed for these tasks
+  vars_prompt:
+    - name: "github_token"
+      prompt: "Enter your GitHub Personal Access Token (with 'repo' scope)"
+      private: yes
+    - name: "github_owner"
+      prompt: "Enter your GitHub username or organization (e.g., your-gh-username)"
+      private: no
+    - name: "github_repository_name"
+      prompt: "Enter the GitHub repository name for Flux (e.g., my-flux-cluster-config)"
+      private: no
+    - name: "git_branch"
+      prompt: "Enter the Git branch for Flux (e.g., main)"
+      private: no
+      default: "main"
+    - name: "flux_cluster_config_path"
+      prompt: "Enter the path within the repo for Flux to sync cluster configs (e.g., ./clusters/my-cluster)"
+      private: no
+      default: "./clusters/my-cluster"
+    - name: "flux_cli_version"
+      prompt: "Enter the desired Flux CLI version (e.g., 2.3.0 - check Flux docs for latest)"
+      private: no
+      default: "2.3.0" # VERIFY this against current Flux releases
+    - name: "local_repo_clone_path"
+      prompt: "Enter a local temporary path to clone your Git repository (e.g., /tmp/{{ github_repository_name }})"
+      private: no
+      default: "/tmp/{{ github_repository_name | regex_replace('\\s', '_') }}" # Basic sanitization
+
+  tasks:
+    - name: "Block for Flux CLI Installation (Linux amd64)"
+      block:
+        - name: "Check for existing Flux CLI and version"
+          ansible.builtin.command: "flux --version"
+          register: flux_cli_check
+          ignore_errors: yes
+          changed_when: false
+
+        - name: "Install Flux CLI {{ flux_cli_version }} if not present or wrong version"
+          when: flux_cli_check.failed or (flux_cli_version not in flux_cli_check.stdout)
+          block:
+            - name: "Download Flux CLI binary (Linux x86_64)"
+              ansible.builtin.get_url:
+                url: "https://github.com/fluxcd/flux2/releases/download/v{{ flux_cli_version }}/flux_{{ flux_cli_version }}_linux_amd64.tar.gz"
+                dest: "/tmp/flux_{{ flux_cli_version }}_linux_amd64.tar.gz"
+                mode: '0644'
+
+            - name: "Create temporary directory for Flux CLI extraction"
+              ansible.builtin.tempfile:
+                state: directory
+                suffix: flux_extract
+              register: temp_flux_extract_dir
+
+            - name: "Extract Flux CLI"
+              ansible.builtin.unarchive:
+                src: "/tmp/flux_{{ flux_cli_version }}_linux_amd64.tar.gz"
+                dest: "{{ temp_flux_extract_dir.path }}"
+                remote_src: yes # Indicates 'src' is on the Ansible controller (localhost here)
+
+            - name: "Move Flux CLI to /usr/local/bin (requires sudo)"
+              ansible.builtin.copy:
+                src: "{{ temp_flux_extract_dir.path }}/flux"
+                dest: "/usr/local/bin/flux"
+                mode: '0755'
+                remote_src: yes
+              become: yes
+
+            - name: "Clean up downloaded Flux CLI tarball"
+              ansible.builtin.file:
+                path: "/tmp/flux_{{ flux_cli_version }}_linux_amd64.tar.gz"
+                state: absent
+
+            - name: "Clean up Flux CLI extraction directory"
+              ansible.builtin.file:
+                path: "{{ temp_flux_extract_dir.path }}"
+                state: absent
+      rescue:
+        - name: "Flux CLI installation block failed"
+          ansible.builtin.debug:
+            msg: "Flux CLI installation failed. Please ensure you have sudo permissions for /usr/local/bin or install Flux CLI (version {{ flux_cli_version }}) manually and ensure it's in your PATH. Then re-run the playbook. Error: {{ ansible_failed_result }}"
+        - name: "End play due to Flux CLI installation failure"
+          ansible.builtin.meta: end_play
+
+    - name: "Get Flux CLI version after potential install"
+      ansible.builtin.command: "flux --version"
+      register: flux_version_check_after_install
+      changed_when: false # This command doesn't change state on the system
+      ignore_errors: yes  # Let the assert task handle the failure logic based on output
+
+    - name: "Verify Flux CLI version is correct"
+      ansible.builtin.assert:
+        that:
+          - flux_version_check_after_install.rc == 0 # Check if the command itself was successful
+          - "'{{ flux_cli_version }}' in flux_version_check_after_install.stdout"
+        fail_msg: >-
+          Flux CLI version '{{ flux_cli_version }}' not found or command failed.
+          RC: {{ flux_version_check_after_install.rc }}
+          STDOUT: {{ flux_version_check_after_install.stdout | default('N/A') }}
+          STDERR: {{ flux_version_check_after_install.stderr | default('N/A') }}
+        quiet: yes # Only output if the assertion fails
+
+    - name: "Execute Flux pre-flight checks" # Renamed slightly for clarity
+      ansible.builtin.command: "flux check --pre"
+      register: flux_pre_check
+      changed_when: false  # This command doesn't change state on the system
+      ignore_errors: yes   # We'll let the assert task below handle the failure determination
+
+    - name: "Verify Flux pre-flight checks passed"
+      ansible.builtin.assert:
+        that:
+          - flux_pre_check.rc == 0
+        fail_msg: >-
+          Flux pre-flight check failed. Please resolve the issues reported.
+          RC: {{ flux_pre_check.rc }}
+          STDOUT: {{ flux_pre_check.stdout | default('N/A') }}
+          STDERR: {{ flux_pre_check.stderr | default('N/A') }}
+        quiet: yes # Only output if the assertion fails
+
+- name: "FluxCD Get Started: Bootstrap Flux"
+  hosts: localhost # Assumes kubectl is configured to target the desired cluster
+  gather_facts: no
+  # Vars are available from the previous play since hosts: localhost is the same.
+
+  tasks:
+    - name: "Bootstrap FluxCD on the Kubernetes cluster"
+      ansible.builtin.command: >-
+        flux bootstrap github
+        --owner={{ github_owner }}
+        --repository={{ github_repository_name }}
+        --branch={{ git_branch }}
+        --path={{ flux_cluster_config_path }}
+        --namespace=flux-system
+        --network-policy=false
+        --personal-access-token={{ github_token }}
+      environment:
+        GITHUB_TOKEN: "{{ github_token }}" # Also recognized by flux bootstrap
+        # KUBECONFIG: "/path/to/your/kubeconfig" # Uncomment and set if not using default
+      register: flux_bootstrap_output
+      changed_when: "'✔ reconciliation complete' in flux_bootstrap_output.stdout or '✔ bootstrapped' in flux_bootstrap_output.stdout or '✔ Components bootstrapped' in flux_bootstrap_output.stdout"
+      failed_when: "flux_bootstrap_output.rc != 0 and not ('components are already installed' in flux_bootstrap_output.stderr or 'already has a GVK' in flux_bootstrap_output.stderr or 'already bootstrapped' in flux_bootstrap_output.stderr)"
+      no_log: false # The token is passed as an arg, but GITHUB_TOKEN is also set. Consider implications.
+
+    - name: "Debug Flux bootstrap output"
+      ansible.builtin.debug:
+        var: flux_bootstrap_output.stdout_lines
+        verbosity: 1
+
+- name: "FluxCD Get Started: Add Sample Podinfo Workload to Git"
+  hosts: localhost
+  gather_facts: no
+  # Vars available
+
+  vars:
+    # Define paths relative to the cloned repository and the cluster config path
+    # Ensure flux_cluster_config_path does not start with './' for clean joining
+    clean_flux_cluster_config_path: "{{ flux_cluster_config_path | regex_replace('^\\./', '') }}"
+    podinfo_manifests_dir_in_repo: "{{ clean_flux_cluster_config_path }}/podinfo"
+    podinfo_flux_sync_cr_filename: "podinfo-kustomization.yaml" # Name of the Flux Kustomization CR file
+    podinfo_flux_sync_cr_repo_path: "{{ clean_flux_cluster_config_path }}/{{ podinfo_flux_sync_cr_filename }}"
+    cluster_root_kustomization_repo_path: "{{ clean_flux_cluster_config_path }}/kustomization.yaml"
+    podinfo_image_tag: "6.7.0" # VERIFY this against current Flux guide
+
+  tasks:
+    - name: "Block for Git operations and manifest creation"
+      block:
+        - name: "Check if local repo path exists"
+          ansible.builtin.stat:
+            path: "{{ local_repo_clone_path }}"
+          register: repo_path_stat
+
+        - name: "Clone the repository if it doesn't exist locally"
+          ansible.builtin.git:
+            repo: "https://{{ github_owner }}:{{ github_token }}@github.com/{{ github_owner }}/{{ github_repository_name }}.git"
+            dest: "{{ local_repo_clone_path }}"
+            version: "{{ git_branch }}"
+            accept_hostkey: yes # Use with caution, consider known_hosts for production
+          when: not repo_path_stat.stat.exists or not repo_path_stat.stat.isdir
+          no_log: true # Hide token in URL from logs
+
+        - name: "Ensure repository is on the correct branch and up-to-date"
+          ansible.builtin.git:
+            repo: "https://{{ github_owner }}:{{ github_token }}@github.com/{{ github_owner }}/{{ github_repository_name }}.git"
+            dest: "{{ local_repo_clone_path }}"
+            version: "{{ git_branch }}"
+            force: yes # git pull --rebase or similar to ensure it's up-to-date
+          when: repo_path_stat.stat.exists and repo_path_stat.stat.isdir
+          no_log: true
+
+        - name: "Create directory for Podinfo manifests in the cloned repo"
+          ansible.builtin.file:
+            path: "{{ local_repo_clone_path }}/{{ podinfo_manifests_dir_in_repo }}"
+            state: directory
+            mode: '0755'
+
+        - name: "Create Podinfo Namespace manifest"
+          ansible.builtin.copy:
+            dest: "{{ local_repo_clone_path }}/{{ podinfo_manifests_dir_in_repo }}/namespace.yaml"
+            content: |
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: podinfo
+
+        - name: "Create Podinfo Deployment and Service manifest"
+          ansible.builtin.copy:
+            dest: "{{ local_repo_clone_path }}/{{ podinfo_manifests_dir_in_repo }}/deployment.yaml"
+            content: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: podinfo
+                namespace: podinfo
+              spec:
+                replicas: 2
+                selector:
+                  matchLabels:
+                    app.kubernetes.io/name: podinfo
+                template:
+                  metadata:
+                    labels:
+                      app.kubernetes.io/name: podinfo
+                  spec:
+                    containers:
+                    - name: podinfo
+                      image: "stefanprodan/podinfo:{{ podinfo_image_tag }}"
+                      imagePullPolicy: IfNotPresent
+                      ports:
+                      - name: http
+                        containerPort: 9898
+                        protocol: TCP
+                      command:
+                        - ./podinfo
+                        - --port=9898
+                        - --ui-message='Hello from Flux, deployed by Ansible!'
+              ---
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: podinfo
+                namespace: podinfo
+              spec:
+                type: ClusterIP
+                selector:
+                  app.kubernetes.io/name: podinfo
+                ports:
+                - port: 9898
+                  targetPort: http
+                  protocol: TCP
+
+        - name: "Create Kustomization for Podinfo app manifests (in its own directory)"
+          ansible.builtin.copy:
+            dest: "{{ local_repo_clone_path }}/{{ podinfo_manifests_dir_in_repo }}/kustomization.yaml"
+            content: |
+              apiVersion: kustomize.config.k8s.io/v1beta1
+              kind: Kustomization
+              namespace: podinfo
+              resources:
+                - namespace.yaml
+                - deployment.yaml
+
+        - name: "Create Flux Kustomization CR to sync Podinfo workload"
+          ansible.builtin.copy:
+            # This file (podinfo-kustomization.yaml) goes into the cluster sync path (e.g. clusters/my-cluster/)
+            dest: "{{ local_repo_clone_path }}/{{ podinfo_flux_sync_cr_repo_path }}"
+            content: |
+              apiVersion: kustomize.toolkit.fluxcd.io/v1 # VERIFY API version
+              kind: Kustomization
+              metadata:
+                name: podinfo
+                namespace: flux-system # Flux Kustomizations CRs are typically in flux-system
+              spec:
+                interval: 1m
+                path: "./{{ podinfo_manifests_dir_in_repo | D(clean_flux_cluster_config_path + '/podinfo') | basename }}" # Path relative to this Kustomization's location within flux_cluster_config_path
+                prune: true
+                sourceRef:
+                  kind: GitRepository
+                  name: flux-system # Default name for the repo bootstrapped by Flux
+                wait: true # Wait for resources to be ready
+                timeout: 5m
+                # Ensure the 'path' is relative from the root of flux_cluster_config_path
+                # If podinfo_manifests_dir_in_repo is 'clusters/my-cluster/podinfo'
+                # and flux_cluster_config_path is 'clusters/my-cluster', then path should be './podinfo'
+
+        - name: "Ensure root kustomization.yaml for the cluster sync path exists"
+          ansible.builtin.copy:
+            dest: "{{ local_repo_clone_path }}/{{ cluster_root_kustomization_repo_path }}"
+            content: |
+              apiVersion: kustomize.config.k8s.io/v1beta1
+              kind: Kustomization
+              resources: []
+            force: no # Do not overwrite if it exists
+
+        - name: "Add Flux Kustomization for Podinfo to the cluster's root kustomization.yaml resources list"
+          ansible.builtin.lineinfile:
+            path: "{{ local_repo_clone_path }}/{{ cluster_root_kustomization_repo_path }}"
+            regexp: "^(\\s*-\\s*{{ podinfo_flux_sync_cr_filename }})" # Match existing entry
+            line: "  - {{ podinfo_flux_sync_cr_filename }}"         # Ensure this line exists
+            insertafter: "^resources:"                             # Insert after 'resources:' line
+            # This is a simple approach; for complex YAML, use community.general.yaml or similar
+
+        - name: "Add all changes in the cloned repository to Git staging"
+          ansible.builtin.command: "git add ."
+          args:
+            chdir: "{{ local_repo_clone_path }}"
+          changed_when: true # Assume files were created/modified
+
+        - name: "Commit changes to local Git repository"
+          ansible.builtin.command: "git commit -m 'Add Podinfo sample workload via Ansible and Flux'"
+          args:
+            chdir: "{{ local_repo_clone_path }}"
+          register: git_commit_status
+          changed_when: "'nothing to commit' not in git_commit_status.stdout and 'no changes added to commit' not in git_commit_status.stdout"
+          failed_when: "git_commit_status.rc != 0 and not ('nothing to commit' in git_commit_status.stdout or 'no changes added to commit' in git_commit_status.stdout)"
+
+        - name: "Push changes to remote Git repository"
+          ansible.builtin.command: "git push origin {{ git_branch }}"
+          args:
+            chdir: "{{ local_repo_clone_path }}"
+          when: git_commit_status.changed # Only push if there were new commits
+          changed_when: true
+          no_log: true # The command itself might not log tokens, but good
