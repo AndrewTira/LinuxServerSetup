@@ -1,0 +1,15 @@
+# clusters/main-cluster/flux-system/flux-system-flux-system-kustomization.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: "./flux-managed-infra-and-data-platforms"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  validation: client
+  timeout: 2m0s
