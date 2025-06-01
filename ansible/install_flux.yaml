@@ -2,6 +2,7 @@
 - name: "FluxCD Get Started: Prerequisites & Flux CLI Setup"
   hosts: localhost
   gather_facts: no
+
   vars_prompt:
     - name: "github_token"
       prompt: "Enter your GitHub Personal Access Token (PAT with 'repo' scope)"
@@ -23,9 +24,9 @@
     - name: "flux_git_repo_path"
       prompt: >-
         Enter the path WITHIN your Git repository where Flux will store its main config 
-        and sync from. In your case: clusters/main-cluster/flux-sources
+        and sync from. In your case: clusters/main-cluster
       private: no
-      default: "./clusters/main-cluster/flux-sources"
+      default: "./clusters/main-cluster"
 
     - name: "flux_cli_version"
       prompt: "Enter the desired Flux CLI version (e.g., 2.6.0)"
@@ -137,6 +138,7 @@
 
       name: "Install & verify Flux CLI"
 
+
 - name: "FluxCD Get Started: Bootstrap Flux"
   hosts: localhost
   gather_facts: no
@@ -170,193 +172,3 @@
       ansible.builtin.debug:
         var: flux_bootstrap_output.stdout_lines
         verbosity: 1
-
-- name: "FluxCD Get Started: (Optional) Add a sample workload"
-  hosts: localhost
-  gather_facts: no
-  vars:
-    clean_flux_git_repo_path: "{{ flux_git_repo_path_global | regex_replace('^\\./', '') }}"
-    podinfo_manifest_base_dir_local: "{{ local_git_repo_clone_path_global }}/{{ clean_flux_git_repo_path }}"
-    podinfo_app_manifests_dir_in_repo: "{{ clean_flux_git_repo_path }}/podinfo"
-    podinfo_flux_kustomization_filename: "podinfo-sync.yaml"
-    podinfo_flux_kustomization_local_path: "{{ podinfo_manifest_base_dir_local }}/{{ podinfo_flux_kustomization_filename }}"
-    cluster_root_kustomization_local_path: "{{ podinfo_manifest_base_dir_local }}/kustomization.yaml"
-    podinfo_image_tag: "6.7.0"
-
-  tasks:
-    - block:
-        - name: "Ensure local Git repo is up-to-date"
-          ansible.builtin.git:
-            repo: "https://{{ github_owner_global }}:{{ github_token_global }}@github.com/{{ github_owner_global }}/{{ github_repository_name_global }}.git"
-            dest: "{{ local_git_repo_clone_path_global }}"
-            version: "{{ git_branch_global }}"
-            force: yes
-          no_log: true
-          register: git_pull_status
-          failed_when: >
-            git_pull_status.failed and
-            'Your local changes to the following files would be overwritten' not in git_pull_status.msg and
-            'Please commit your changes or stash them' not in git_pull_status.msg and
-            'Already up to date' not in git_pull_status.stdout
-
-        - name: "Create directory for Podinfo manifests"
-          ansible.builtin.file:
-            path: "{{ local_git_repo_clone_path_global }}/{{ podinfo_app_manifests_dir_in_repo }}"
-            state: directory
-            mode: '0755'
-
-        - name: "Create Podinfo Namespace manifest"
-          ansible.builtin.copy:
-            dest: "{{ local_git_repo_clone_path_global }}/{{ podinfo_app_manifests_dir_in_repo }}/namespace.yaml"
-            content: |
-              apiVersion: v1
-              kind: Namespace
-              metadata:
-                name: podinfo
-
-        - name: "Create Podinfo Deployment + Service manifest"
-          ansible.builtin.copy:
-            dest: "{{ local_git_repo_clone_path_global }}/{{ podinfo_app_manifests_dir_in_repo }}/deployment.yaml"
-            content: |
-              apiVersion: apps/v1
-              kind: Deployment
-              metadata:
-                name: podinfo
-                namespace: podinfo
-              spec:
-                replicas: 2
-                selector:
-                  matchLabels:
-                    app.kubernetes.io/name: podinfo
-                template:
-                  metadata:
-                    labels:
-                      app.kubernetes.io/name: podinfo
-                  spec:
-                    containers:
-                    - name: podinfo
-                      image: "ghcr.io/stefanprodan/podinfo:{{ podinfo_image_tag }}"
-                      imagePullPolicy: IfNotPresent
-                      ports:
-                      - name: http
-                        containerPort: 9898
-                        protocol: TCP
-                      command:
-                        - ./podinfo
-                        - --port=9898
-                        - --ui-message='Hello from Flux, deployed by Ansible (local clone)!'
-              ---
-              apiVersion: v1
-              kind: Service
-              metadata:
-                name: podinfo
-                namespace: podinfo
-              spec:
-                type: ClusterIP
-                selector:
-                  app.kubernetes.io/name: podinfo
-                ports:
-                - name: http
-                  port: 9898
-                  targetPort: http
-                  protocol: TCP
-
-        - name: "Create Kustomization for Podinfo app"
-          ansible.builtin.copy:
-            dest: "{{ local_git_repo_clone_path_global }}/{{ podinfo_app_manifests_dir_in_repo }}/kustomization.yaml"
-            content: |
-              apiVersion: kustomize.config.k8s.io/v1beta1
-              kind: Kustomization
-              namespace: podinfo
-              resources:
-                - namespace.yaml
-                - deployment.yaml
-
-        - name: "Create Flux Kustomization CR for Podinfo"
-          ansible.builtin.copy:
-            dest: "{{ podinfo_flux_kustomization_local_path }}"
-            content: |
-              apiVersion: kustomize.toolkit.fluxcd.io/v1
-              kind: Kustomization
-              metadata:
-                name: podinfo-app-sync
-                namespace: flux-system
-              spec:
-                interval: 1m
-                path: "./podinfo"
-                prune: true
-                sourceRef:
-                  kind: GitRepository
-                  name: flux-system
-                wait: true
-                timeout: 5m
-
-        - name: "Ensure root kustomization.yaml exists under flux-sources"
-          ansible.builtin.copy:
-            dest: "{{ cluster_root_kustomization_local_path }}"
-            content: |
-              apiVersion: kustomize.config.k8s.io/v1beta1
-              kind: Kustomization
-              resources: []
-            force: no
-
-        - name: "Add Podinfo Kustomization to root kustomization.yaml"
-          ansible.builtin.lineinfile:
-            path: "{{ cluster_root_kustomization_local_path }}"
-            regexp: "^(\\s*-\\s*{{ podinfo_flux_kustomization_filename }}\\s*$)"
-            line: "  - {{ podinfo_flux_kustomization_filename }}"
-            insertafter: "^resources:"
-            create: yes
-            state: present
-
-        - name: "Stage all changes in local clone"
-          ansible.builtin.command: "git add ."
-          args:
-            chdir: "{{ local_git_repo_clone_path_global }}"
-          changed_when: true
-
-        - name: "Commit new Podinfo + Flux sync config"
-          ansible.builtin.command: >-
-            git commit -m 'Add Podinfo sample workload and Flux sync configuration'
-          args:
-            chdir: "{{ local_git_repo_clone_path_global }}"
-          register: git_commit_status
-          changed_when: >
-            "'nothing to commit' not in git_commit_status.stdout and 
-             'no changes added to commit' not in git_commit_status.stdout"
-          failed_when: >
-            git_commit_status.rc != 0 and 
-            not ('nothing to commit' in git_commit_status.stdout or 
-                 'no changes added to commit' in git_commit_status.stdout)
-
-        - name: "Push local commits to remote Git"
-          ansible.builtin.command: >-
-            git push https://{{ github_owner_global }}:{{ github_token_global }}@github.com/{{ github_owner_global }}/{{ github_repository_name_global }}.git HEAD:{{ git_branch_global }}
-          args:
-            chdir: "{{ local_git_repo_clone_path_global }}"
-          when: git_commit_status.changed
-          changed_when: true
-          no_log: true
-
-      rescue:
-        - name: "Git operations or manifest creation failed"
-          ansible.builtin.debug:
-            msg: "Error during Git operations or manifest creation. Please check permissions and Git status."
-
-        - name: "Abort play"
-          ansible.builtin.meta: end_play
-
-      always:
-        - name: "Show next steps"
-          ansible.builtin.debug:
-            msg: |
-              Podinfo workload + Flux Kustomization CR have been created/updated under:
-              '{{ local_git_repo_clone_path_global }}/{{ flux_git_repo_path_global }}' and pushed.
-
-              You can now monitor:
-                • flux get kustomizations --watch
-                • kubectl -n flux-system get gitrepositories
-                • kubectl -n flux-system get kustomization flux-system -oyaml
-                • kubectl -n flux-system get kustomization podinfo-app-sync -oyaml
-                • kubectl -n podinfo get deployments,services,pods
-                • flux logs --all-namespaces --level=info
