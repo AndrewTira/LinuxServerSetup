@@ -142,15 +142,17 @@
   gather_facts: no
 
   tasks:
-    - name: "Bootstrap FluxCD (pushes manifests into Git)"
+    - name: "Bootstrap FluxCD into flux-sources/ without creating a nested flux-system folder"
       ansible.builtin.command: >-
         flux bootstrap github
-        --owner={{ github_owner_global }}
-        --repository={{ github_repository_name_global }}
-        --branch={{ git_branch_global }}
-        --path={{ flux_git_repo_path_global }}
-        --namespace=flux-system
-        --network-policy=false
+          --owner={{ github_owner_global }}
+          --repository={{ github_repository_name_global }}
+          --branch={{ git_branch_global }}
+          --path={{ flux_git_repo_path_global }}
+          --components=.
+          --sync=.
+          --namespace=flux-system
+          --network-policy=false
       environment:
         GITHUB_TOKEN: "{{ github_token_global }}"
       register: flux_bootstrap_output
@@ -162,9 +164,10 @@
         flux_bootstrap_output.rc != 0 and
         not (
           'components are already installed' in flux_bootstrap_output.stderr or
-          'already has a GVK' in flux_bootstrap_output.stderr or
-          'already bootstrapped' in flux_bootstrap_output.stderr
+          'already has a GVK'          in flux_bootstrap_output.stderr or
+          'already bootstrapped'       in flux_bootstrap_output.stderr
         )
+
 
     - name: "Display bootstrap output"
       ansible.builtin.debug:
