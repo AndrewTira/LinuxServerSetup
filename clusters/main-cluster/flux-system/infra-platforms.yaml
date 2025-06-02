@@ -14,4 +14,3 @@ spec:
     kind: GitRepository
     name: flux-system         # <- the GitRepository created by bootstrap
   targetNamespace: flux-system
-  validation: client
