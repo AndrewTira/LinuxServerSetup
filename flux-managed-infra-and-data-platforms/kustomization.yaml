@@ -2,8 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - core-infrastructure
-  - 00-base-crds
-  - 01-namespaces
   - storage-solutions-core
   - platform-tools-setup
   - data-processing-and-orchestration
