@@ -6,3 +6,5 @@ resources:
   - platform-tools-setup
   - data-processing-and-orchestration
   - data-platforms-and-databases
+#  - 00-base-crds
+#  - 01-namespaces
