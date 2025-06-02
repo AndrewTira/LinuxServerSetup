@@ -1,0 +1,17 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  # Arbitrary name—just unique inside the flux-system namespace
+  name: infra-platforms
+  namespace: flux-system
+spec:
+  # Reconcile every 10 minutes
+  interval: 10m
+  # Where in **this Git repo** the manifests live
+  path: ./flux-managed-infra-and-data-platforms
+  prune: true                 # Remove objects that disappear from Git
+  sourceRef:
+    kind: GitRepository
+    name: flux-system         # <- the GitRepository created by bootstrap
+  targetNamespace: flux-system
+  validation: client
