@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: clickhouse
+  namespace: clickhouse           # release namespace
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: clickhouse
+      version: 9.2.4              # pin to the same chart version
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami-oci
+        namespace: flux-system
+      interval: 1h
+  install:
+    createNamespace: true         # = Argo’s CreateNamespace=true
+  values: |                        # copy/pasted values block
+    persistence:
+      enabled: true
+      size: 10Gi
+      # storageClass: your-storage-class-name
+
+    auth:
+      password: adminadmin        # ⚠️ consider a Secret for production
+
+    # replicaCount: 3
+
+    # ingress:
+    #   enabled: true
+    #   hostname: clickhouse.yourdomain.com
+    #   # tls:
+    #   #   - secretName: clickhouse-tls
+    #   #     hosts:
+    #   #       - clickhouse.yourdomain.com
+    #   # annotations:
+    #   #   kubernetes.io/ingress.class: nginx
+
+    # keeper:
+    #   enabled: true
+    #   replicaCount: 3
